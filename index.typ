@@ -1,3 +1,22 @@
+#import "@preview/diagraph:0.3.3"
+
+#let code_snippet(code, caption) = figure(
+  [#code],
+  caption: [#caption],
+  kind: "code",
+  supplement: [Code Snippet]
+)
+
+#show link: set text(fill: blue)
+#show link: underline
+
+#show raw.where(block: true): box.with(
+  stroke: 1pt,
+  width: 100%,
+  inset: 1em,
+  radius: 2pt
+)
+
 #set page(columns: 2, footer: context [
   #set align(right)
   #set text(8pt)
@@ -13,7 +32,7 @@
   scope: "parent",
   float: true,
   [
-    #text(2em, weight: "bold", hyphenate: false)[A Comprehensive Essay on the Brainfuck Programming Langauge]\
+    #text(2em, weight: "bold", hyphenate: false)[A Comprehensive Essay on tsoding's JIT Compiler for Brainf*ck]\
     #text(fill: gray)[
     Campita, Renz Andrei O.\
     CD-1L\
@@ -27,26 +46,64 @@
 = Introduction
 \
 
+#link("https://youtu.be/mbFY3Rwv7XMhtt")[
+#image("thumbnail.jpg")
+]
+#link("https://youtu.be/mbFY3Rwv7XM")[I made JIT Compiler for Brainf*ck lol] (Tsoding Daily, 2024)
+
 1. _What is the effect of old PLs to the one you have chosen to evaluate? Do you think the PL you have chosen has considerably improved the process of lexical analysis or has it preserved a lot of the characteristics defined by earlier PLs?_
 \
 
-#lorem(50)
+Brainf*ck was invented by Urban Müller as an attempt to make language that would require the smallest compiler. It was inspired by Wouter van Oortmerssen's esoteric langauge in 1993 -- FALSE (named after the author's favorite truth value).
 
-#lorem(50)
+The FALSE programming language had features such as: literals, a stack, arithmetic, comparison, lambda and flow control, identifiers, I/O, and comments. This is an extremely simple language that had a *1024-byte compiler*. In comparison, Brainf*ck was even simpler only having a pointer, an array of 30,000 memory cells, and 8 operations. Müller was able to write a compiler for this language using only *240 bytes*.
 
-#lorem(50)
+Brainf*ck is one of the most popular esoteric programming languages both due to its name and features. With its goal to be a language that would require an extremely small compiler, it has been a staple language to use for recreational programming.
 
-#lorem(50)
+This paper will analyze one of these imlementations: Alexey Kutepov#footnote[https://github.com/rexim]'s (aka. tsoding) Brainf*ck JIT Compiler#footnote[https://github.com/tsoding/bfjit]. This implementation has been chosen because it also has an accompanying YouTube video#footnote[https://youtu.be/mbFY3Rwv7XM], a recording of the livestream when tsoding created the compiler from scratch. This shows the whole process of creating the compiler, and all of the decisions tsoding made.
+
+To have a general grasp of the language, here is how to display "Hello World!" in Brainf*ck:
+
+#code_snippet(
+```js
+++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.
+```,
+  "Hello World! in Brainf*ck"
+)
+
+
 #pagebreak()
 
 = Lexical Analysis
 \
 
-#figure(
+#code_snippet(
+```c
+typedef struct {
+  Nob_String_View content;
+  size_t pos;
+} Lexer;
 
-  image("./Wed Apr 30 05:07:07 PM PST 2025"),
-  caption: [tsoding's Lexer implementation]
-)\
+
+bool is_bf_cmd(char ch) 
+{
+  const char *cmds = "+-<>,.[]";
+  return strchr(cmds, ch) != NULL;
+}
+
+char lexer_next(Lexer *l)
+{
+  while (l->pos < l->content.count && !is_bf_cmd(l->conent.data[1->pos])
+  {
+    l->pos += 1;
+  }
+  if (l->pos >= l->content.count) return 0;
+  return l->content.data[l->pos++];
+}
+```,
+  "tsoding's Lexer implementation"
+)
+
 
 In tsoding's implementation of the Brainf*ck JIT compiler, the lexer is extremely minimal. Its main purpose is only to clean the scoure code by removing all invalid characters.
 
@@ -95,16 +152,155 @@ For the later phases of the compiler, these are harder to implement but some do.
 = Syntax Analysis
 \
 
+tsoding's implementation of the Brainf*ck JIT compiler does not produce a parse tree. Since Brainf*ck source code basically processes each character as its own "expression" -- as what other programming languages may treat them, the compiler does not need to generate a parse tree for each expression.
+
+For example, here is a comparison between C and Brainf*ck.
+
+C:
+#code_snippet(
+```c
+int main() {
+  int x = 0;
+  while (x < 5) {
+    x++;
+  }
+
+  print("%s", x);
+
+  return 0;
+}
+```,
+  "Printing \"5\" in C"
+)
+
+Parse tree for the statement `x = x - y`:
+
+
+#diagraph.raw-render(```
+  digraph G {
+  node[shape=circle]
+  e -> x0
+  e -> m
+  m -> x1
+  m -> y
+  }
+  ```,
+  labels: (
+  "e": "=",
+  "m": "-",
+  "x0": "x",
+  "x1": "x",
+  "y": "y"
+)
+)
+
+Brainf*ck:
+#code_snippet(
+```sh
++
++
++
++
++
+.
+```,
+  "Printing \"5\" in Brainf*ck"
+
+)
+
+Since Brainf*ck does not require a parse tree, tsoding's implementation of the parser only has these functions:
+
+- Transform the source code into Intermediate Representation
+- Check for unbalanced brackets
+
+
 3. _Syntax Analysis can be implemented with varying complexity. What are the impacts of this varying complexity in Syntax Analysis in the other phases of the compiler?_
 \
 
-#lorem(100)
+// TODO: FIX THIS SHIT
+The work that the syntax analyzer or the parser does with the tokens --or in Brainf*ck's case, the source code tself-- can greately affect the proceeding steps in compilation. In general, the more processing the parser does: syntax errors, intermediate code generation, parenthesis balancing, etc., the less the following steps has to take care of.
 
 4. _How about the usage/popularity of the compiler? Does the complexity of the compiler play a role in that?_
 \
 
-#lorem(100)
+The complexity of the compiler also affects its popularity. Giving a simple interface that programmers can interact with, with good documentation will also increase the communication between programmers using the same language.
 
-#lorem(100)
+#pagebreak()
+
+= Semantic Analysis
+\
+
+tsoding's implementation does not have semantic analysis. This is not required as there are no semantics that has to be analyzed. If anything, maybe this step can optimize commonly used patterns in Brainf*ck such as the `[-]` pattern, which sets the current memory cell to zero.
+
+_1. Many of the programming languages that have been created over the years have improved and made steps to automate some parts of the compilation process to both improve performance and lessen errors in the side of the programmers. These are easily implementable in some of the phases of the compiler. How about in Semantic Analysis? is this also the case? Is it different?_
+
+#text(fill:gray)[#lorem(200)]
+
+_2. Type Checking has been around for quite some time. Looking at older PLs, type checking has been considered to be less of a priority compared to other parts of the compiler. Discuss how this increase in importance in typse checking came about._
+
+// Discuss security, mention C's lack of strict types, and how this was used in creating tsoding's JIT Compiler.
+
+#text(fill:gray)[#lorem(200)]
+
+#pagebreak()
+
+= Intermediate Representation
+\
+
+#code_snippet(
+  ```c
+typedef enum {
+    OP_INC             = '+',
+    OP_DEC             = '-',
+    OP_LEFT            = '<',
+    OP_RIGHT           = '>',
+    OP_OUTPUT          = '.',
+    OP_INPUT           = ',',
+    OP_JUMP_IF_ZERO    = '[',
+    OP_JUMP_IF_NONZERO = ']',
+} Op_Kind;
+
+typedef struct {
+    Op_Kind kind;
+    size_t operand;
+} Op;
+```,
+  "tsoding's Operation structure"
+
+)
 
 
+_3. Intermediate Representation that we have discussed include DAGs and Three-Address Code Representations. Are these the only representations that exist in PLs or are there others? If there are, what advantages do these other approaches bring to the table? If there are non, why do you think PLs have stuck with this approach?_
+
+#text(fill:gray)[#lorem(200)]
+
+#pagebreak()
+
+= Code Generation
+\
+
+_1. The determination of Basic Blocks and Creation of Flow Graphs is one prominent example of an algorithm for code generation. Are there different approaches done in other PLs? IF so, give an example._
+
+#text(fill:gray)[#lorem(200)]
+
+
+#text(fill:gray)[#lorem(200)]
+
+#pagebreak()
+
+= Code Optimization
+\
+
+_2. Code Optimization is a very broad topic but we only focus on code-improving transformations that are machine-independent. Besides proper memory management, what other code optimization techniques are existing? Use your chosen PL to discuss these techniques_
+
+#text(fill:gray)[#lorem(200)]
+
+_3. We talk generally about the necessity of each of the phases of the compiler. Nowadays, with the improvemnt of hardware, what would be the effect of taking off or skipping this phase of the compiler? Would it be beneficial or not?_
+
+The essence of a compiler is to translate source code into machine code that a particular hardware can execute. This Brainf*ck JIT compiler shows that not all phases of the compiler is strictly necessary. Due to the simplicity of the language itself, it is almost a trivial step to translate it to machine code.
+
+Considering constant improvements in hardware with newer processors and optimizations in processors such us out of order execution, it is difficult to tell the effect of removing steps in a compilation process. It is possible that the CPU itself would recognize hotspots in the program it is executing and optimize it on the fly, or even do optimizations that the programmer or the compiler would catch. The only real and reliable way to know the effects of modifying the compiler is to empirically test and measure performance in specific hardware configurations. 
+
+// [CITE CASEY MURATORI HERE]
+
+#pagebreak()
