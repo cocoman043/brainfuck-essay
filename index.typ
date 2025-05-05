@@ -234,13 +234,39 @@ tsoding's implementation does not have semantic analysis. This is not required a
 
 _1. Many of the programming languages that have been created over the years have improved and made steps to automate some parts of the compilation process to both improve performance and lessen errors in the side of the programmers. These are easily implementable in some of the phases of the compiler. How about in Semantic Analysis? is this also the case? Is it different?_
 
-#text(fill:gray)[#lorem(200)]
 
-_2. Type Checking has been around for quite some time. Looking at older PLs, type checking has been considered to be less of a priority compared to other parts of the compiler. Discuss how this increase in importance in typse checking came about._
+// Languages improve
+//
+// eg. type inference
+//
+// Automate parts of compilation
+//
+// eg. sentax and semantic error in IDEs
+// eg. vairbale not declared
+// eg. type mismatches
+//
+// Improve performance and lessen errors
 
-// Discuss security, mention C's lack of strict types, and how this was used in creating tsoding's JIT Compiler.
+Improvements in the Semantic Analysis step of compilation are also being made constantly. An example of this are Language Server Protocol Servers that text editors such as Visual Studio Code or Vim uses to detect and suggest fixes for syntactic or semantic errors.
 
-#text(fill:gray)[#lorem(200)]
+#figure(
+  image("./rust_analyzer"),
+  caption: "rustanalyzer (Rust LSP) showing semantic error"
+)
+
+There's also been improvements with implicit types, where languages with static typing can have variables that does not have their type declared but is implied by the language itself given the value it was assigned. Some LSPs also help with this feature by showing the type implied by the language.
+
+#figure(
+  image("./Mon May  5 10:40:36 AM PST 2025"),
+  caption: "rustanalyzer showing the implied type of x with ghost/virtual text"
+)
+
+_2. Type Checking has been around for quite some time. Looking at older PLs, type checking has been considered to be less of a priority compared to other parts of the compiler. Discuss how this increase in importance in type checking came about._
+
+// Discuss security, mention C's lack of strong types, and how this was used in creating tsoding's JIT Compiler.
+
+Type checking has been important since the early programming languages.
+
 
 #pagebreak()
 
