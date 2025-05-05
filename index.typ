@@ -1,4 +1,7 @@
 #import "@preview/diagraph:0.3.3"
+#import "@preview/codly:1.3.0": *
+#import "@preview/codly-languages:0.1.1": *
+#show: codly-init.with()
 
 #let code_snippet(code, caption) = figure(
   [#code],
@@ -10,12 +13,23 @@
 #show link: set text(fill: blue)
 #show link: underline
 
-#show raw.where(block: true): box.with(
-  stroke: 1pt,
-  width: 100%,
-  inset: 1em,
-  radius: 2pt
-)
+// #show raw.where(block: true): box.with(
+//   stroke: 1pt,
+//   width: 100%,
+//   inset: 1em,
+//   radius: 2pt
+// )
+//
+// #show raw.where(block: true): it => { set par(justify: false); grid(
+//   columns: (100%, 100%),
+//   column-gutter: -100%,
+//   block(width: 100%, inset: 1em, for i, line in it.text.split("\n") {
+//     box(width: 0pt, align(right, str(i + 1) + h(2em)))
+//     hide(line)
+//     linebreak()
+//   }),
+//   block(radius: 1em, fill: luma(246), width: 100%, inset: 1em, it),
+// )}
 
 #set page(columns: 2, footer: context [
   #set align(right)
@@ -26,6 +40,7 @@
   )
 ])
 #set par(justify: true, first-line-indent: 1em, spacing: 1.5em)
+#set heading(numbering: "1.")
 
 #place(
   top+center,
@@ -65,7 +80,7 @@ This paper will analyze one of these imlementations: Alexey Kutepov#footnote[htt
 To have a general grasp of the language, here is how to display "Hello World!" in Brainf*ck:
 
 #code_snippet(
-```js
+```
 ++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.
 ```,
   "Hello World! in Brainf*ck"
@@ -78,6 +93,7 @@ To have a general grasp of the language, here is how to display "Hello World!" i
 \
 
 #code_snippet(
+ [#codly()
 ```c
 typedef struct {
   Nob_String_View content;
@@ -100,7 +116,8 @@ char lexer_next(Lexer *l)
   if (l->pos >= l->content.count) return 0;
   return l->content.data[l->pos++];
 }
-```,
+```]
+  ,
   "tsoding's Lexer implementation"
 )
 
@@ -196,7 +213,7 @@ Parse tree for the statement `x = x - y`:
 
 Brainf*ck:
 #code_snippet(
-```sh
+```
 +
 +
 +
@@ -212,6 +229,47 @@ Since Brainf*ck does not require a parse tree, tsoding's implementation of the p
 
 - Transform the source code into Intermediate Representation
 - Check for unbalanced brackets
+
+#code_snippet(
+  text(size: 8pt,
+    ```c
+case '[': {
+  size_t addr = ops->count;
+  Op op = {
+      .kind = c,
+      .operand = 0,
+  };
+  nob_da_append(ops, op);
+  nob_da_append(&stack, addr);
+
+  c = lexer_next(&l);
+} break;
+
+case ']': {
+  if (stack.count == 0) {
+      // TODO: reports rows and columns
+      printf("%s [%zu]: ERROR: Unbalanced loop\n", file_path, l.pos);
+      nob_return_defer(false);
+  }
+
+  size_t addr = stack.items[--stack.count];
+  Op op = {
+      .kind = c,
+      .operand = addr + 1,
+  };
+  nob_da_append(ops, op);
+  ops->items[addr].operand = ops->count;
+
+  c = lexer_next(&l);
+} break;
+  ```
+  ),
+  "Unbalanced brackets checking"
+)\
+
+The transformation of source code into intermediate representation will be discussed further in the paper. See #ref(<ir-heading>).
+
+To check for unbalanced brackets, a stack of brackets is used.
 
 
 3. _Syntax Analysis can be implemented with varying complexity. What are the impacts of this varying complexity in Syntax Analysis in the other phases of the compiler?_
@@ -230,7 +288,20 @@ The complexity of the compiler also affects its popularity. Giving a simple inte
 = Semantic Analysis
 \
 
-tsoding's implementation does not have semantic analysis. This is not required as there are no semantics that has to be analyzed. If anything, maybe this step can optimize commonly used patterns in Brainf*ck such as the `[-]` pattern, which sets the current memory cell to zero.
+tsoding's implementation does not have semantic analysis. This is not required as there are no semantics that has to be analyzed. If anything, maybe this step can optimize commonly used patterns in Brainf*ck such as the `[-]` pattern, which sets the current memory cell to zero. So if a certain sequence of operations can be seen in the array of operations, maybe it can be represented with another intermediate representation or operation eg.:
+
+`
+OP_JUMP_IF_ZERO
+OP_DECREMENT
+OP_JUMP_IF_NONZERO`
+
+can be optimized to
+
+`
+OP_SET_ZERO
+`
+
+which would be translated into its own machine code equivalent. There are a lot of these common patterns/algorithms in Brainf*ck that could be possibly be optimized this way too.#footnote[https://esolangs.org/wiki/Brainfuck_algorithms]
 
 _1. Many of the programming languages that have been created over the years have improved and made steps to automate some parts of the compilation process to both improve performance and lessen errors in the side of the programmers. These are easily implementable in some of the phases of the compiler. How about in Semantic Analysis? is this also the case? Is it different?_
 
@@ -252,14 +323,14 @@ Improvements in the Semantic Analysis step of compilation are also being made co
 #figure(
   image("./rust_analyzer"),
   caption: "rustanalyzer (Rust LSP) showing semantic error"
-)
+)\
 
 There's also been improvements with implicit types, where languages with static typing can have variables that does not have their type declared but is implied by the language itself given the value it was assigned. Some LSPs also help with this feature by showing the type implied by the language.
 
 #figure(
   image("./Mon May  5 10:40:36 AM PST 2025"),
   caption: "rustanalyzer showing the implied type of x with ghost/virtual text"
-)
+)\
 
 _2. Type Checking has been around for quite some time. Looking at older PLs, type checking has been considered to be less of a priority compared to other parts of the compiler. Discuss how this increase in importance in type checking came about._
 
@@ -270,7 +341,7 @@ Type checking has been important since the early programming languages.
 
 #pagebreak()
 
-= Intermediate Representation
+= Intermediate Representation <ir-heading>
 \
 
 #code_snippet(
@@ -316,6 +387,8 @@ _1. The determination of Basic Blocks and Creation of Flow Graphs is one promine
 
 = Code Optimization
 \
+
+tsoding plainly translates all of the intermediate representation into machine code with a simple mapping ie. if an operation is `x`, then the machine code is `y`. Generating the machine code for the current operation does not depend on what previous operations have already been made and this is a point that can be optimized in the compiler.
 
 _2. Code Optimization is a very broad topic but we only focus on code-improving transformations that are machine-independent. Besides proper memory management, what other code optimization techniques are existing? Use your chosen PL to discuss these techniques_
 
